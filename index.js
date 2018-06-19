@@ -52,16 +52,22 @@ module.exports.processImage = (event, context, callback) => {
 							retryCountForOverlay = ++retryCountForOverlay
 							return getOverlayImage()
 						}
+						
 						console.log('GOT OVERLAY IMAGE')
-						overlayImage.scaleToWidth(img.width * 0.5)
+						
+						const imageWidth = img.width
+						const scaleToWidth = (1-(Math.exp((-0.002*(imageWidth/2)))))*500
+						overlayImage.scaleToWidth(scaleToWidth)
+						
 						
 						canvas.setOverlayImage(overlayImage, canvas.renderAll.bind(canvas), {
-							top: img.height * ((img.height - overlayImage.aCoords.br.y) / (img.height)),
-							left: img.width * ((img.width - overlayImage.aCoords.br.x) / (img.width))
+							top: img.height - overlayImage.aCoords.br.y - (img.width * 0.02),
+							left: img.width - scaleToWidth - (img.width * 0.02)
 						})
+						
 						canvas.renderAll()
 						
-						const stream = canvas.createPNGStream();
+						const stream = canvas.createJPEGStream();
 						
 						const upload = s3Stream.upload({
 							Bucket: bucketName,
@@ -75,7 +81,6 @@ module.exports.processImage = (event, context, callback) => {
 						
 						pipeline.on('error', error => error)
 						pipeline.on('uploaded', details => {
-							console.log("deets: " + JSON.stringify(details))
 							return httpResponse(null, {mediaUrl: 'https://s3.amazonaws.com/' +
 							bucketName + '/overlayed-images/' + parsedBody.userTwitterUid + '.png', text: "Here is image"}, callback)
 						})
