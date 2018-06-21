@@ -1,5 +1,6 @@
 'use strict'
 const _ = require('lodash')
+const moment = require('moment')
 const fabric = require('fabric').fabric
 const AWS = require('aws-sdk')
 const bucketName = process.env.S3_BUCKET_NAME
@@ -95,16 +96,20 @@ module.exports.processProfileImage = (event, context, callback) => {
 
             pipeline.on('error', error => error)
             pipeline.on('uploaded', details => {
+							const timestamp = moment().add(3, 'hours').format("HH:mm:ss")
+							const timestampText = timestamp && timestamp.length ? timestamp : ''
               const text =
                 userLanguage === 'ar'
-                  ? 'إليك صورتك المعدلة مع الفلتر الخاص إظهاراً لدعمك لهذا اليوم التاريخي، العاشر من شوال. أعد تغريد الصورة أو غير صورة حسابك الشخصي أو شاركها على المواقع الأخرى، استخدمها كما تشاء. #أنا_أقرر'
-                  : 'Dear, It’s here! Your personalized profile pic to support the historic day of 10 Shawal. Retweet it, update your profile, share as you please. It’s up to you! #UpToMe'
+                  ? 'إليك صورتك المعدلة مع الفلتر الخاص إظهاراً لدعمك لهذا اليوم التاريخي، العاشر من شوال. أعد تغريد الصورة أو غير صورة حسابك الشخصي أو شاركها على المواقع الأخرى، استخدمها كما تشاء. #أنا_أقررإليك صورتك المعدلة مع الفلتر الخاص إظهاراً لدعمك لهذا اليوم التاريخي، العاشر من شوال. أعد تغريد الصورة أو غير صورة حسابك الشخصي أو شاركها على المواقع الأخرى، استخدمها كما تشاء. #أنا_أقرر'
+                  : 'Dear, It’s here! Your personalized profile pic to support the historic day of 10 Shawwal. Retweet it, update your profile, share as you please. It’s up to you! #UpToMe'
 
+							const timestampAppendedText = text + ' ' + timestampText
+							
               return httpResponse(
                 null,
                 {
                   mediaUrl: 'https://s3.amazonaws.com/' + bucketName + '/overlayed-profile-images/' + userTwitterId + '.png',
-                  text
+                  text: timestampAppendedText
                 },
                 callback
               )

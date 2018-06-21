@@ -1,5 +1,6 @@
 'use strict'
 const _ = require('lodash')
+const moment = require('moment')
 const fabric = require('fabric').fabric
 const AWS = require('aws-sdk')
 const bucketName = process.env.S3_BUCKET_NAME
@@ -23,11 +24,15 @@ const httpResponse = (err, res, callback) =>
 
 const getInvalidImageResponse = (userlanguage, callback) => {
   console.log('IMAGE NOT ATTACHED BY USER OR INVALID IMAGE')
+	const timestamp = moment().add(3, 'hours').format("HH:mm:ss")
+	const timestampText = timestamp && timestamp.length ? timestamp : ''
   const text =
     userlanguage === 'ar'
       ? 'الرجاء ارفاق تغريدتكم بالصورة التي تودون إضافة الفلتر إليها. ;)'
       : 'Dear, please make sure you attach an image to your tweet in order to receive your personalized edit. ;)'
-  return httpResponse(null, {text}, callback)
+	const timeStampAppendedText = text + ' ' + timestampText
+	console.log(timeStampAppendedText)
+  return httpResponse(null, {text: timeStampAppendedText}, callback)
 }
 
 module.exports.processImage = (event, context, callback) => {
@@ -56,12 +61,16 @@ module.exports.processImage = (event, context, callback) => {
 
           if (img.width < 200 || img.height < 200) {
             console.log('IMAGE SIZE NOT VALID')
+						const timestamp = moment().add(3, 'hours').format("HH:mm:ss")
+						const timestampText = timestamp && timestamp.length ? timestamp : ''
+						
             const invalidImageText =
               userLanguage === 'ar'
                 ? 'أقل أبعاد مسموح بها هي 200x200. الرجاء إعادة إرسال الصورة بالأبعاد الصحيحة لاستلام صورتك الشخصية المعدلة مع الفلتر الخاص.'
                 : 'Dear, the minimum image size allowed is 200x200. Please resend us the image in the correct size to receive your personalized edit.'
-
-            return httpResponse(null, {text: invalidImageText}, callback)
+						const timeStampAppendedInvalidText = invalidImageText + ' ' + timestampText
+						console.log(timeStampAppendedInvalidText)
+            return httpResponse(null, {text: timeStampAppendedInvalidText}, callback)
           }
 
           const canvas = new fabric.Canvas('canvas', {height: img.height, width: img.width})
@@ -113,15 +122,21 @@ module.exports.processImage = (event, context, callback) => {
 
               pipeline.on('error', error => error)
               pipeline.on('uploaded', details => {
+								const timestamp = moment().add(3, 'hours').format("HH:mm:ss")
+								const timestampText = timestamp && timestamp.length ? timestamp : ''
+								
                 const successReplyText =
                   userLanguage === 'ar'
-                    ? 'إليك صورتك المعدلة مع الفلتر الخاص إظهاراً لدعمك لهذا اليوم التاريخي، العاشر من شوال. أعد تغريد الصورة أو غير صورة حسابك الشخصي أو شاركها على المواقع الأخرى، استخدمها كما تشاء. #أنا_أقرر'
-                    : 'Dear, It’s here! Your personalized picture to support the historic day of 10 Shawal. Retweet it, update your profile, share as you please. It’s up to you! #UpToMe'
-                return httpResponse(
+                    ? 'إليك صورتك المعدلة مع الفلتر الخاص إظهاراً لدعمك لهذا اليوم التاريخي، العاشر من شوال. أعد تغريد الصورة أو غير صورة حسابك أو شاركها على المواقع الأخرى، استخدمها كما تشاء. #أنا_أقرر'
+                    : 'Dear, It’s here! Your personalized picture to support the historic day of 10 Shawwal. Retweet it, update your profile, share as you please. It’s up to you! #UpToMe'
+	
+								const timestampAppendedText = successReplyText + ' ' + timestampText
+								console.log(timestampAppendedText)
+								return httpResponse(
                   null,
                   {
                     mediaUrl: 'https://s3.amazonaws.com/' + bucketName + '/overlayed-images/' + userTwitterId + '.jpg',
-                    text: successReplyText
+                    text: timestampAppendedText
                   },
                   callback
                 )
