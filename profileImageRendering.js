@@ -100,7 +100,7 @@ module.exports.processProfileImage = (event, context, callback) => {
 							const timestampText = timestamp && timestamp.length ? timestamp : ''
               const text =
                 userLanguage === 'ar'
-                  ? 'إليك صورتك المعدلة مع الفلتر الخاص إظهاراً لدعمك لهذا اليوم التاريخي، العاشر من شوال. أعد تغريد الصورة أو غير صورة حسابك الشخصي أو شاركها على المواقع الأخرى، استخدمها كما تشاء. #أنا_أقررإليك صورتك المعدلة مع الفلتر الخاص إظهاراً لدعمك لهذا اليوم التاريخي، العاشر من شوال. أعد تغريد الصورة أو غير صورة حسابك الشخصي أو شاركها على المواقع الأخرى، استخدمها كما تشاء. #أنا_أقرر'
+                  ? 'إليك صورتك المعدلة مع الفلتر الخاص إظهاراً لدعمك لهذا اليوم التاريخي، العاشر من شوال. أعد تغريد الصورة أو غير صورة حسابك الشخصي أو شاركها على المواقع الأخرى، استخدمها كما تشاء. #أنا_أقرر'
                   : 'Dear, It’s here! Your personalized profile pic to support the historic day of 10 Shawwal. Retweet it, update your profile, share as you please. It’s up to you! #UpToMe'
 
 							const timestampAppendedText = text + ' ' + timestampText

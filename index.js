@@ -31,7 +31,6 @@ const getInvalidImageResponse = (userlanguage, callback) => {
       ? 'الرجاء ارفاق تغريدتكم بالصورة التي تودون إضافة الفلتر إليها. ;)'
       : 'Dear, please make sure you attach an image to your tweet in order to receive your personalized edit. ;)'
 	const timeStampAppendedText = text + ' ' + timestampText
-	console.log(timeStampAppendedText)
   return httpResponse(null, {text: timeStampAppendedText}, callback)
 }
 
@@ -44,9 +43,16 @@ module.exports.processImage = (event, context, callback) => {
 
     const getImageUrl = () => {
       const parsedBody = JSON.parse(event.body)
-      const imageUrl = _.get(parsedBody, 'metaData.originalTweet.entities.media.0.media_url')
-      const userLanguage = _.get(event.queryStringParameters, 'lang', 'en')
-      const userTwitterId = _.get(parsedBody, 'tweet.userTwitterUid') ? _.get(parsedBody, 'tweet.userTwitterUid') : Date.now().toString()
+			const userLanguage = _.get(event.queryStringParameters, 'lang', 'en')
+	
+			const media = _.get(parsedBody, 'metaData.originalTweet.extended_entities.media')
+			if (!media || !media.length) return getInvalidImageResponse(userLanguage, callback)
+			
+			const photo = media.filter(attachment => attachment.type === "photo")
+			if (!photo || !photo.length) return getInvalidImageResponse(userLanguage, callback)
+			
+      const imageUrl = _.get(photo, '0.media_url')
+			const userTwitterId = _.get(parsedBody, 'tweet.userTwitterUid') ? _.get(parsedBody, 'tweet.userTwitterUid') : Date.now().toString()
       if (!imageUrl) return getInvalidImageResponse(userLanguage, callback)
       else {
         return fabric.Image.fromURL(imageUrl, img => {
@@ -69,7 +75,6 @@ module.exports.processImage = (event, context, callback) => {
                 ? 'أقل أبعاد مسموح بها هي 200x200. الرجاء إعادة إرسال الصورة بالأبعاد الصحيحة لاستلام صورتك الشخصية المعدلة مع الفلتر الخاص.'
                 : 'Dear, the minimum image size allowed is 200x200. Please resend us the image in the correct size to receive your personalized edit.'
 						const timeStampAppendedInvalidText = invalidImageText + ' ' + timestampText
-						console.log(timeStampAppendedInvalidText)
             return httpResponse(null, {text: timeStampAppendedInvalidText}, callback)
           }
 
@@ -131,7 +136,6 @@ module.exports.processImage = (event, context, callback) => {
                     : 'Dear, It’s here! Your personalized picture to support the historic day of 10 Shawwal. Retweet it, update your profile, share as you please. It’s up to you! #UpToMe'
 	
 								const timestampAppendedText = successReplyText + ' ' + timestampText
-								console.log(timestampAppendedText)
 								return httpResponse(
                   null,
                   {
