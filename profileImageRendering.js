@@ -4,6 +4,7 @@ const moment = require('moment')
 const fabric = require('fabric').fabric
 const AWS = require('aws-sdk')
 const bucketName = process.env.S3_BUCKET_NAME
+const overlayImageURL = process.env.OVERLAY_IMAGE_URL //The image used had a dimension of 674x230 and was uploaded in S3
 const AWSAuth = {
   accessKeyId: process.env.AWS_ACCESS_KEYID,
   secretAccessKey: process.env.AWS_SECRET_ACCESSKEY,
@@ -31,7 +32,6 @@ module.exports.processProfileImage = (event, context, callback) => {
     const getImageUrl = () => {
       const parsedBody = JSON.parse(event.body)
       const imageUrl = _.get(parsedBody, 'metaData.originalTweet.user.profile_image_url')
-      const userLanguage = _.get(event.queryStringParameters, 'lang', 'en')
       const userTwitterId = _.get(parsedBody, 'tweet.userTwitterUid') ? _.get(parsedBody, 'tweet.userTwitterUid') : Date.now().toString()
       if (!imageUrl) return httpResponse({message: 'No profile image received'}, {}, callback)
 
@@ -53,7 +53,7 @@ module.exports.processProfileImage = (event, context, callback) => {
         canvas.renderAll()
 
         const getOverlayImage = () => {
-          return fabric.Image.fromURL('https://s3.amazonaws.com/api-project-81-staging/Option-4.png', overlayImage => {
+          return fabric.Image.fromURL(overlayImageURL, overlayImage => {
             if (!overlayImage.width && retryCountForOverlay < 1) {
               retryCountForOverlay = ++retryCountForOverlay
               return getOverlayImage()
@@ -98,10 +98,7 @@ module.exports.processProfileImage = (event, context, callback) => {
             pipeline.on('uploaded', details => {
 							const timestamp = moment().add(3, 'hours').format("HH:mm:ss")
 							const timestampText = timestamp && timestamp.length ? timestamp : ''
-              const text =
-                userLanguage === 'ar'
-                  ? 'إليك صورتك المعدلة مع الفلتر الخاص إظهاراً لدعمك لهذا اليوم التاريخي، العاشر من شوال. أعد تغريد الصورة أو غير صورة حسابك الشخصي أو شاركها على المواقع الأخرى، استخدمها كما تشاء. #أنا_أقرر'
-                  : 'Dear, It’s here! Your personalized profile pic to support the historic day of 10 Shawwal. Retweet it, update your profile, share as you please. It’s up to you! #UpToMe'
+              const text =  'It’s here! Your personalized profile pic.'
 
 							const timestampAppendedText = text + ' ' + timestampText
 							

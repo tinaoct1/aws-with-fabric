@@ -4,6 +4,7 @@ const moment = require('moment')
 const fabric = require('fabric').fabric
 const AWS = require('aws-sdk')
 const bucketName = process.env.S3_BUCKET_NAME
+const overlayImageURL = process.env.OVERLAY_IMAGE_URL //The image used had a dimension of 674x230 and was uploaded in S3
 const AWSAuth = {
   accessKeyId: process.env.AWS_ACCESS_KEYID,
   secretAccessKey: process.env.AWS_SECRET_ACCESSKEY,
@@ -22,15 +23,12 @@ const httpResponse = (err, res, callback) =>
     }
   })
 
-const getInvalidImageResponse = (userlanguage, callback) => {
+const getInvalidImageResponse = (callback) => {
   console.log('IMAGE NOT ATTACHED BY USER OR INVALID IMAGE')
 	const timestamp = moment().add(3, 'hours').format("HH:mm:ss")
 	const timestampText = timestamp && timestamp.length ? timestamp : ''
-  const text =
-    userlanguage === 'ar'
-      ? 'الرجاء ارفاق تغريدتكم بالصورة التي تودون إضافة الفلتر إليها. ;)'
-      : 'Dear, please make sure you attach an image to your tweet in order to receive your personalized edit. ;)'
-	const timeStampAppendedText = text + ' ' + timestampText
+  const text = 'Please make sure you attach an image to your tweet in order to receive your personalized edit. ;)'
+	const timeStampAppendedText = text + ' ' + timestampText //To get a unique tweet text
   return httpResponse(null, {text: timeStampAppendedText}, callback)
 }
 
@@ -43,25 +41,24 @@ module.exports.processImage = (event, context, callback) => {
 
     const getImageUrl = () => {
       const parsedBody = JSON.parse(event.body)
-			const userLanguage = _.get(event.queryStringParameters, 'lang', 'en')
 	
 			const media = _.get(parsedBody, 'metaData.originalTweet.extended_entities.media')
-			if (!media || !media.length) return getInvalidImageResponse(userLanguage, callback)
+			if (!media || !media.length) return getInvalidImageResponse(callback)
 			
 			const photo = media.filter(attachment => attachment.type === "photo")
-			if (!photo || !photo.length) return getInvalidImageResponse(userLanguage, callback)
+			if (!photo || !photo.length) return getInvalidImageResponse(callback)
 			
       const imageUrl = _.get(photo, '0.media_url')
 			const userTwitterId = _.get(parsedBody, 'tweet.userTwitterUid') ? _.get(parsedBody, 'tweet.userTwitterUid') : Date.now().toString()
-      if (!imageUrl) return getInvalidImageResponse(userLanguage, callback)
+      if (!imageUrl) return getInvalidImageResponse(callback)
       else {
         return fabric.Image.fromURL(imageUrl, img => {
-          if (!img.width && retryCount < 1) {
+          if (!img.width && retryCount < 1) {//in case image is not fetched
             retryCount = ++retryCount
             return getImageUrl()
           }
 
-          if (!img.width) return getInvalidImageResponse(userLanguage, callback) // return invalid check this with jasim
+          if (!img.width) return getInvalidImageResponse(callback)
 
           console.log('GOT BASE IMAGE')
 
@@ -70,11 +67,8 @@ module.exports.processImage = (event, context, callback) => {
 						const timestamp = moment().add(3, 'hours').format("HH:mm:ss")
 						const timestampText = timestamp && timestamp.length ? timestamp : ''
 						
-            const invalidImageText =
-              userLanguage === 'ar'
-                ? 'أقل أبعاد مسموح بها هي 200x200. الرجاء إعادة إرسال الصورة بالأبعاد الصحيحة لاستلام صورتك الشخصية المعدلة مع الفلتر الخاص.'
-                : 'Dear, the minimum image size allowed is 200x200. Please resend us the image in the correct size to receive your personalized edit.'
-						const timeStampAppendedInvalidText = invalidImageText + ' ' + timestampText
+            const invalidImageText = "The minimum image size allowed is 200x200. Please resend us the image in the correct size to receive your personalized edit."
+						const timeStampAppendedInvalidText = invalidImageText + ' ' + timestampText// To get a unique tweet text
             return httpResponse(null, {text: timeStampAppendedInvalidText}, callback)
           }
 
@@ -84,7 +78,7 @@ module.exports.processImage = (event, context, callback) => {
           canvas.renderAll()
 
           const getOverlayImage = () => {
-            return fabric.Image.fromURL('https://s3.amazonaws.com/api-project-81-staging/Option-4.png', overlayImage => {
+            return fabric.Image.fromURL(overlayImageURL, overlayImage => {
               if (!overlayImage.width && retryCountForOverlay < 1) {
                 retryCountForOverlay = ++retryCountForOverlay
                 return getOverlayImage()
@@ -130,10 +124,7 @@ module.exports.processImage = (event, context, callback) => {
 								const timestamp = moment().add(3, 'hours').format("HH:mm:ss")
 								const timestampText = timestamp && timestamp.length ? timestamp : ''
 								
-                const successReplyText =
-                  userLanguage === 'ar'
-                    ? 'إليك صورتك المعدلة مع الفلتر الخاص إظهاراً لدعمك لهذا اليوم التاريخي، العاشر من شوال. أعد تغريد الصورة أو غير صورة حسابك أو شاركها على المواقع الأخرى، استخدمها كما تشاء. #أنا_أقرر'
-                    : 'Dear, It’s here! Your personalized picture to support the historic day of 10 Shawwal. Retweet it, update your profile, share as you please. It’s up to you! #UpToMe'
+                const successReplyText = 'Dear, It’s here! Your personalized picture. Retweet it, update your profile, share as you please.'
 	
 								const timestampAppendedText = successReplyText + ' ' + timestampText
 								return httpResponse(
